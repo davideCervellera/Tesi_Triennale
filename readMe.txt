@@ -1,0 +1,21 @@
+Nella cartella PythonProject è contenuto tutto il codice in python.
+1)In datacollector.py vengono estratti una serie di url da phishtank.com e majestic.com; viene quindi creato un unico file csv contenente una lista di url ognuno dei quali etichettato come "sicuro" o "phishing".
+
+2)Una volta ottenuto il dataset, all' interno di url_normalizer.py questo viene normalizzato, cioè viene tolto dall' inizio di ogni url la parte contenente "http://" e la parte che contiene "www." questo per evitare che nel momento dell'addestramento il modello possa rilevare pattern non esistenti (magari potrebbe capitare che una serie di url di phishing siano tutti preceduti da www. , mentre gli url sicuri no, in questo caso il modello rileverebbe che se un url inizia con wwww. allora sarà sicuramente di phishing). Vengono anche rimossi gli url che superano la lunghezza di 128 caratteri, al fine di evitare possibili errori. In seguito vengono rimosse le righe vuote e le righe duplicate e viene generato un nuovo file contenente tutti gli url normalizzati. Il dataset viene corretto inoltre con un file generato da chatgpt contenente 5.000 url sicuri completi di path. Questo per diversificare i dati e ottenere migliori prestazioni. Il file generato da chatgpt è presente nella cartella.
+
+3)In model_training.py avviene il training. E' stato impostato un training in 8 epoche, con un valore di 80% dei dati fornito per addestramento e il restante 20% è stato utilizzato per i test. E' stata inoltre aggiunta una funzione di Early-Stop che interrompe l'esecuzione del codice se l'accuratezza del modello non aumenta per ogni epoca.
+Alla fine del training vengono visualizzati dei dati utili per interpretare se il processo è stato svolto correttamente o meno.
+
+4)In model_test.py avviene il test del modello appena creato. Al fine del corretto funzionamento quando inseriamo un url, questo viene normalizzato seguendo lo stesso procedimento fatto per il dataset, in modo da evitare ogni tipo di possibile errore. I risultati ottenuti dal testing sono abbastanza soddisfacenti, ho rilevato però che nel caso in cui venga fornito un url molto lungo e complesso, questo viene a priori identificato come url di phishing. L'unico modo per risolvere questo problema sarebbe stravolgere il dataset iniziale fornendo una quantità significativa di url lunghi e complessi sicuri.
+
+5)Dopo aver salvato il modello questo deve essere esportato in formato CoreML per poter poi essere usato su swift. In convert_model.py il modello viene prima convertito in pyThorch(.pt) e in seguito in CoreML (mlpackage). Durante la conversione è stato impostato come target minimo IOS16.
+
+Nella cartella SafeURL è contenuta invece la parte relativa al codice Swift.
+1)E' stato importato il modello generato precedentemente tinyBertURLClassifier.mlpackage all'interno del progetto. In automatico Xcode ha provveduto a generare le classi relative a questo modello.
+
+2)Nella classe URLClassifier viene implementata la logica relativa alla gestione di eventuali errori e all' interpretazione dei risultati ottenuti. E' qui infatti che il modello viene istanziato.
+Anche qui è presente una funzione che normalizza gli url forniti in modo da essere coerenti con quanto fatto precedentemente.
+
+3)Uno dei problemi più grandi riscontrati durante la creazione dell'App è stata l'implementazione del tokenizer in Swift. Il tokenizer è uno strumento che converte le stringhe degli url in un formato leggibile per in modello, per farlo utilizza il vocabolario originale del modello. E' stato quindi necessario importare il file vocab.txt generato automaticamente dal modello in fase di training. A questo punto, per garantire il funzionamento dell'App interamente in locale, è stato necessario scrivere un Tokenizer che si avvicini il più possibile al tokenizer del modello tinyBERT. La classe WordPieceTokenizer.swift fa proprio questo.
+
+4)Infine è stata implementata l'interfaccia nella classe ContentView.swift. L' interfaccia prevede una textbox all'interno della quale viene inserito l'url dall'utente e un bottone che permette di avviare il processo di classificazione dell'url (attraverso la chiamata della funzione contenuta in URLClassifier). Alla fine viene visualizzata a schermo una scritta che indica la predizione effettuata dal modello.
